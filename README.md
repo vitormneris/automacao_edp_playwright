@@ -1,0 +1,1 @@
+# automacao_edp_playwright
