@@ -22,7 +22,7 @@ def show_menu() -> int:
     """)
     
     uc_selected: int = int(input("UC: "))
-    uc_validation(uc_selected)
+    uc_selected = uc_validation(uc_selected)
     return uc_selected
 
 # Verifica se UC não está no intervalo determinado pela lista
@@ -30,3 +30,4 @@ def uc_validation(uc_selected: int):
     while uc_selected < 1 or uc_selected > len(unidade_consumidoras):
         print("Ops, este valor está inválido, tente outra vez!")
         uc_selected = int(input("UC: "))
+    return uc_selected
