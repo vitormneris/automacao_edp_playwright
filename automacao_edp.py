@@ -6,11 +6,14 @@ from playwright.sync_api import Locator, Page, sync_playwright
 
 load_dotenv()
 
-is_menu_present: bool = False
+is_menu_present: bool = True
 user_email: str = str(os.getenv("USER_EMAIL"))
 user_password: str = str(os.getenv("USER_PASSWORD"))
 path_to_download: str = f"{Path.home()}/Desktop"
 unidade_consumidora: str = ""
+
+def is_modal_open(modal: Locator):
+    return modal.count() > 0 and modal.is_visible()
 
 if is_menu_present:
     from menu import show_menu, unidade_consumidoras
@@ -74,35 +77,45 @@ with sync_playwright() as p:
     print("Página da unidade consumidora selecionada")
 
     modal_alteracao_cadastral: Locator = page.locator("#modal-alteracao-cadastral")
-    modal_alteracao_cadastral.locator("a").get_by_text("Mais tarde",exact=True).click()
-    modal_alteracao_cadastral.wait_for(state="hidden", timeout=15000)
-    print("Modal alteração cadastral fechado")
-    
+    for tentativa in range(5):
+        print(f"{tentativa + 1}° tentativa:", modal_alteracao_cadastral.count())
+        if is_modal_open(modal_alteracao_cadastral):
+            modal_alteracao_cadastral.locator("a").get_by_text("Mais tarde",exact=True).click()
+            modal_alteracao_cadastral.wait_for(state="hidden", timeout=15000)
+            print("Modal alteração cadastral fechado")
+        page.wait_for_timeout(500)
+
     modal_pix_auto: Locator = page.locator("#modal-oferta-pix-automatico")
-    modal_pix_auto.locator("button").get_by_text("Agora não",exact=True).click()
-    modal_pix_auto.wait_for(state="hidden", timeout=15000)
-    print("Modal oferta pix automático fechado")
+    for tentativa in range(5):
+        print(f"{tentativa + 1}° tentativa:", modal_pix_auto.count())
+        if is_modal_open(modal_pix_auto):        
+            modal_pix_auto.locator("button").get_by_text("Agora não",exact=True).click()
+            modal_pix_auto.wait_for(state="hidden", timeout=15000)
+            print("Modal oferta pix automático fechado")
+        page.wait_for_timeout(500)
 
     page.locator("#fast-menu-bt").locator('a').filter(has_text="Extrato e 2ª Via de Conta").click()
     
     print("Página extrato e 2º via de conta")
     
-    modal_aviso = page.locator("#modal-aviso-impedimento")
-
-    for tentativa in range(10):
-        print("COUNT:", modal_aviso.count())
+    modal_aviso: Locator = page.locator("#modal-aviso-impedimento")
+    for tentativa in range(5):
+        print(f"{tentativa + 1}° tentativa:", modal_aviso.count())
         if modal_aviso.count() > 0:
-            modal_aviso: Locator = page.locator("#modal-aviso-impedimento")
             modal_aviso.locator('button[data-dismiss="modal"]').click()
             modal_aviso.wait_for(state="hidden", timeout=15000)
             print("Modal aviso impedimento fechado")
         page.wait_for_timeout(500)
 
     modal_email: Locator = page.locator("#modal-conta-email")
-    modal_email.locator("a").get_by_text("Não me cadastrar", exact=True).click()
-    modal_email.wait_for(state="hidden", timeout=15000)
-    print("Modal conta email fechado")
-    
+    for tentativa in range(5):
+        print(f"{tentativa + 1}° tentativa:", modal_email.count())
+        if is_modal_open(modal_email):
+            modal_email.locator("a").get_by_text("Não me cadastrar", exact=True).click()
+            modal_email.wait_for(state="hidden", timeout=15000)
+            print("Modal conta email fechado")
+        page.wait_for_timeout(500)
+
     button: Locator = page.locator("button").filter(has_text="Ver mais faturas")
     while button.count() > 0 and button.is_visible():
         button.click()
@@ -115,6 +128,7 @@ with sync_playwright() as p:
         card: Locator = cards.nth(i)
         paragraph_vencida: Locator = card.locator("p", has_text="Vencida")
         paragraph_pendente: Locator = card.locator("p", has_text="Aguardando Pagamento")
+        n_conta = 0
         if paragraph_vencida.count() > 0 or paragraph_pendente.count() > 0:
             print(f"A {i + 1}ª conta vencida ou pendente será baixada")
             
@@ -134,7 +148,8 @@ with sync_playwright() as p:
 
             download = download_info.value
 
-            download.save_as(f"{path_to_download}/fatura_edp_luz_{unidade_consumidora}_{i + 1}.pdf")
+            n_conta = n_conta + 1
+            download.save_as(f"{path_to_download}/fatura_edp_luz_{unidade_consumidora}_{n_conta + 1}.pdf")
             print("Download concluído")
             
             # Localiza o modal
